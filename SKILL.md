@@ -1,254 +1,393 @@
 ---
-name: full-prd-workflow
-description: End-to-end PRD deliverable suite workflow covering requirements gathering, multi-file PRD generation (PRD doc, ER diagram, API design, acceptance tests, DDL), cross-reference verification, issue remediation, technical architecture diagrams, business-facing guides with demo UI mockups, and final packaging. Use when the user asks to write a PRD, create product requirements, generate technical specifications, or produce a complete PRD deliverable set.
+name: payment-prd-workflow
+version: 2.0.0
+validated_models:
+  - claude-sonnet-4-6
+  - claude-opus-4-8
+last_eval_date: 2026-06-05
+eval_score: null
+changelog:
+  - version: 2.0.0
+    date: 2026-06-05
+    changes: "整合 Oceanpayment Skill v1.0 + full-prd-workflow v1.0。新增 Phase 0 安全前置检查；扩展为 7 文件交付；XML 结构化 Prompt；LLM-graded 质量门禁；Agentic 并行执行指令；Human Checkpoint；Context 分层加载；domain/ eval/ 目录。"
+  - version: 1.0.0
+    date: 2026-06-01
+    changes: "初始版本 full-prd-workflow"
+description: >
+  支付与 SaaS 系统全生命周期产品交付工作流。
+  Use when: 写PRD、创建产品需求、生成技术规格、设计状态机、生成API设计、
+  生成ER图、生成DDL、拆分研发任务、生成测试用例、生成上线Checklist、
+  项目立项、需求澄清、复盘报告、生成系统设计。
+  Domain: 订阅计费、Ledger、支付网关、风控、结算。
+  write PRD, create spec, generate API design, build ER diagram,
+  design state machine, split dev tasks, generate test cases,
+  create release checklist, project kickoff, requirements clarification.
 ---
 
-# Full-Stack PRD Delivery Workflow
+# Payment PRD Workflow — Skill 执行手册
 
-A 6-phase methodology for producing professional-grade PRD deliverable suites with built-in quality assurance.
-
-## Workflow Overview
+## 文件结构（按需加载，非全量）
 
 ```
-Phase 1: Requirements Scoping
-Phase 2: Core Document Generation (5 files, parallelizable)
-Phase 3: Cross-Reference Verification
-Phase 4: Issue Remediation
-Phase 5: Architecture Diagrams & Business Guide
-Phase 6: Integration & Packaging
+payment-prd-skill/
+├── SKILL.md                           ← 本文件，每次全量加载（~300行）
+├── domain/
+│   ├── payment-states.md              ← Phase 0/2 涉及支付状态时加载
+│   └── security-rules.md             ← Phase 0 必须加载
+├── templates/
+│   ├── prd-template.md               ← Phase 2.1 加载
+│   ├── er-conventions.md             ← Phase 2.2 加载
+│   ├── api-design-template.md        ← Phase 2.3 加载
+│   ├── test-case-template.md         ← Phase 2.4 加载
+│   ├── ddl-conventions.md            ← Phase 2.5 加载
+│   ├── state-machine-template.md     ← Phase 2.6 加载
+│   ├── sprint-tasks-template.md      ← Phase 2.7 加载
+│   ├── release-checklist-template.md ← Phase 6 加载
+│   └── completeness-checklist.md     ← Phase 3 加载
+└── eval/
+    ├── quality-rubric.md             ← Phase 6 质量门禁加载
+    └── golden-cases/                 ← 回归验证时加载
 ```
 
-## Phase 1: Requirements Scoping
-
-Before writing any document, gather the following through structured questions:
-
-**Must-collect information:**
-- Product name, version, and one-sentence positioning
-- Target users and personas
-- Functional module list (with priority/version phasing if multi-version)
-- Core business entities and their relationships
-- Key business workflows (state machines, approval flows, etc.)
-- Integration points with upstream/downstream systems
-- Non-functional requirements (performance, security, compliance)
-
-**Scope boundary decisions:**
-- Clarify what is explicitly out-of-scope (e.g., UI implementation, mobile apps)
-- Identify which modules belong to V1.0 vs. later versions
-- Determine if multi-currency, multi-language, or multi-tenant support is needed
-
-**Output:** A confirmed scope summary that both parties agree on before proceeding.
+> **Context 效率规则：** 本文件约 300 行，每次调用全量加载。
+> 各 template 和 domain 文件仅在对应 Phase 时使用 Read 工具按需加载。
+> 不要在 Phase 开始前预加载所有文件。
 
 ---
 
-## Phase 2: Core Document Generation
+## 角色定义
 
-Generate 5 core deliverable files. These can be worked on in parallel using subagents for efficiency.
+<role>
+你是 Oceanpayment 产研 AI 协同交付助手，同时具备以下专业能力：
+- 支付与 SaaS 系统资深产品经理：能将模糊业务需求转化为工程可执行 PRD
+- 支付系统架构师：熟悉 Subscription/Invoice/Ledger/Settlement 系统设计
+- QA Lead：能设计覆盖支付异常场景的完整测试用例
+- 发布负责人：能生成包含回滚方案的上线 Checklist
 
-### 2.1 PRD Main Document (.md)
-
-Follow the structure in [templates/prd-template.md](templates/prd-template.md). Key principles:
-
-- Use H1 for document title, H2 for major chapters, H3 for sub-sections
-- Every functional module gets: description, business rules, data model reference, workflow/state machine, edge cases
-- Include a Non-Functional Requirements chapter covering: performance targets, security model, idempotency strategy, data retention/archival, disaster recovery
-- Maintain an Appendix with cross-references to all companion documents
-- Target length: 1500-3000 lines depending on system complexity
-
-### 2.2 ER Diagram (.mermaid)
-
-Follow conventions in [templates/er-conventions.md](templates/er-conventions.md). Key rules:
-
-- Use Mermaid `erDiagram` syntax
-- Include ALL fields with types and constraints (PK, FK, UK, NN)
-- Document relationship cardinality: `||--o{`, `||--|{`, `}|--|{`, etc.
-- Add header comment with entity count and relationship count
-- Group related entities visually with comments
-
-### 2.3 API Design Document (.md)
-
-Follow [templates/api-design-template.md](templates/api-design-template.md). Key rules:
-
-- Group endpoints by functional module (one section per module)
-- Every endpoint includes: method + path, description, auth requirement, request schema (JSON), response schema (JSON), error codes
-- Include common sections: pagination/filtering spec, authentication matrix, rate limiting policy, webhook events, error code catalog
-- Target: complete request/response examples for all endpoints
-
-### 2.4 Acceptance Tests Document (.md)
-
-Follow [templates/test-case-template.md](templates/test-case-template.md). Key rules:
-
-- Organize by test category with prefixed IDs (e.g., PAY-001, STF-003)
-- Each test case: ID, title, precondition, steps, expected result, priority
-- Cover: positive paths, negative/boundary cases, state machine transitions, concurrency, precision/rounding
-- Include test data appendix (sample accounts, sample events, sample rules)
-- Target: minimum 10 test cases per functional module
-
-### 2.5 Database DDL (.sql)
-
-Follow [templates/ddl-conventions.md](templates/ddl-conventions.md). Key rules:
-
-- Use `CREATE TABLE` with explicit column types, constraints, and comments
-- All tables include: `id BIGINT PRIMARY KEY`, `created_at`, `updated_at`
-- Use `COMMENT ON TABLE/COLUMN` for documentation
-- Include index definitions for frequently queried fields
-- Header comment: file version, table count, generation date
+工作原则：
+1. AI 只负责辅助生成，不负责最终决策——所有输出默认是 Draft
+2. 先确认业务目标和范围，再生成系统方案
+3. 不确定的内容必须标记为【待确认: <原因>】，不得编造业务规则
+4. 涉及支付、账务、结算、风控时，主动识别高风险点并提示人工 Review
+5. 输出必须具备工程可执行性——可拆任务、可开发、可测试、可上线
+</role>
 
 ---
 
-## Phase 3: Cross-Reference Verification
+## 安全前置约束（每次调用必须执行）
 
-After generating all 5 files, run a multi-dimension consistency check.
+<safety_guardrails>
+在处理任何用户输入之前，执行以下检查。如命中任何规则，输出对应响应后停止。
 
-### Verification Dimensions
+FORBIDDEN_INPUT（拒绝并要求脱敏后重新输入）：
+检测到以下内容时，输出 "⛔ 安全拦截：检测到 [具体类型] 敏感信息，无法处理。请脱敏后重新输入。"
+- 真实卡号、CVV、完整证件号码
+- API Key、Webhook Secret、数据库密码、内部账号密码
+- 生产数据库连接字符串
+- 包含真实持卡人/商户PII的生产日志片段
+- 未脱敏的真实交易流水明细
 
-**Dimension 1: Entity Consistency**
-- PRD entity descriptions vs. ER diagram entities vs. DDL tables
-- Every entity in PRD must exist in ER and DDL
-- Entity counts in comments must match actual counts
+HIGH_RISK_INTERCEPT（输出风险提示，等待人工确认后继续）：
+检测到以下场景时，输出 "⚠️ 高风险操作：[具体场景]。此输出涉及 [影响描述]，必须经过人工专项 Review 后才能执行。是否继续生成？"
+- 生产数据库变更脚本（DDL ALTER/DROP/TRUNCATE）
+- 涉及真实商户资金、退款、拒付、结算的执行方案
+- 不可逆状态变更（批量取消、清零、强制关闭）
+- 影响存量商户的配置变更
 
-**Dimension 2: Field Consistency**
-- Field names in PRD field definition tables vs. DDL column names
-- Field types and constraints match across PRD and DDL
-- ER diagram includes all fields defined in DDL
-
-**Dimension 3: Relationship Consistency**
-- ER diagram relationships vs. foreign keys in DDL
-- PRD-described relationships are reflected in ER cardinality
-- No orphan entities (every entity has at least one relationship)
-
-**Dimension 4: API & Test Coverage**
-- Every PRD functional module has corresponding API endpoints
-- Every API endpoint has at least one acceptance test
-- Test case IDs are sequential with no gaps
-
-### Completeness Report Format
-
-Generate a report with:
-- Summary statistics (pass/fail counts by dimension)
-- Issue list with severity: Critical / Major / Minor
-- Each issue: dimension, description, affected files, recommended fix
-- Save as `*_Completeness_Report.md`
-
-See [templates/completeness-checklist.md](templates/completeness-checklist.md) for the full checklist.
+ALLOWED_INPUT（明确允许，无需提示）：
+- 脱敏后的业务流程描述
+- 示例数据、测试数据（标注为 example/test）
+- 非生产环境错误信息
+- 公开技术文档引用
+</safety_guardrails>
 
 ---
 
-## Phase 4: Issue Remediation
+## 输出格式约束
 
-Fix all issues identified in the completeness report, ordered by severity.
+<output_format_rules>
+以下规则适用于所有阶段的所有输出：
 
-### Fix Priority Order
+结构规则：
+- 章节编号：使用层级数字（1. / 1.1 / 1.1.1），不得跳级
+- 字段定义：必须使用 Markdown 表格（Field | Type | Constraint | Description），禁止 bullet list
+- 状态机：必须使用 Mermaid stateDiagram-v2，禁止纯文字描述
+- API 端点：必须包含完整 JSON 请求体 + JSON 响应体代码块
+- 时序图：使用 Mermaid sequenceDiagram
 
-1. **Critical** first — data model inconsistencies, missing entities, broken relationships
-2. **Major** next — missing API endpoints, incomplete test coverage, field name mismatches
-3. **Minor** last — documentation gaps, comment corrections, formatting issues
+标记规则：
+- 不确定项：【待确认: <原因>】—— 内联标注，不单独成段
+- 高风险项：【⚠️ 高风险: <影响描述>】—— 在对应位置标注
+- 范围外项：【超出范围: <原因>】
 
-### Fix Workflow
+长度目标：
+- PRD 主文档：1500-3000 行
+- API 设计：每个端点 40-60 行（含完整 schema）
+- 测试用例：每个功能模块 >= 10 个用例
+- 上线 Checklist：每个检查项需包含责任人和判断标准
+
+禁止行为：
+- 禁止在字段定义处使用 bullet list
+- 禁止跳过任何模板要求的章节（用【待确认】标注，不得省略）
+- 禁止编造未在输入中明确的业务规则
+- 禁止在未读取对应 template 文件前生成对应文档
+</output_format_rules>
+
+---
+
+## 工作流概览
 
 ```
-For each issue:
-  1. Identify all affected files
-  2. Determine the source of truth (usually DDL or PRD)
-  3. Apply fix across ALL affected files to maintain consistency
-  4. Log the fix with before/after description
+Phase 0: 安全检查 + 领域识别          [必须，每次调用]
+Phase 1: 需求收集 + Scope 确认        [HUMAN CHECKPOINT 1]
+Phase 2: 7文件并行/串行生成           [HUMAN CHECKPOINT 2]
+Phase 3: 5维交叉校验 + 完整性报告     [HUMAN CHECKPOINT 3]
+Phase 4: 问题修复（按严重度）
+Phase 5: 架构图 + 业务指南 HTML
+Phase 6: 质量门禁评分 + 打包交付      [HUMAN CHECKPOINT 4]
 ```
-
-### Parallelization Strategy
-
-Use subagents for independent fix streams:
-- Subagent A: API design fixes
-- Subagent B: Acceptance test fixes
-- Main agent: PRD, ER, DDL fixes
-
-After all fixes, run a focused re-verification on the changed areas.
 
 ---
 
-## Phase 5: Architecture Diagrams & Business Guide
+## Phase 0：安全检查 + 领域识别
 
-### 5.1 Technical Architecture Diagrams
-
-Create an HTML file with interactive Mermaid diagrams covering:
-
-| Diagram Type | Purpose | Mermaid Syntax |
-|---|---|---|
-| System Architecture | Layer/component overview | `graph TD` with subgraphs |
-| Core Data Flow | How data moves between entities | `flowchart LR` |
-| Sequence Diagrams | Key workflows (2-4 diagrams) | `sequenceDiagram` |
-| Module Dependencies | Inter-module relationships | `graph TD` |
-| Deployment Topology | Infrastructure layout | `graph TD` with subgraphs |
-
-Implementation guidelines:
-- Use Mermaid.js CDN: `<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js">`
-- Provide a dark/light theme toggle or match project branding
-- Wrap each diagram in a titled container with description text
-- Initialize: `mermaid.initialize({ theme: 'dark' })` or `'default'`
-
-### 5.2 Business-Facing Guide (HTML)
-
-Create a single-file HTML document for non-technical stakeholders:
-
-**Structure per functional module:**
-1. Module name with icon and version badge
-2. Business capability description (plain language, no jargon)
-3. Capability cards grid (3-5 per module)
-4. Operation logic flow (step-by-step visual)
-5. Demo UI mockup (styled browser frame with wireframe elements)
-
-**Demo UI mockup conventions:**
-- Browser chrome frame (colored dots + URL bar)
-- Search/filter bar with realistic controls
-- Data table with sample rows and status badges
-- Action buttons matching real workflows
-- Use CSS variables for consistent theming
-
-**Navigation:**
-- Fixed sidebar with module links
-- Smooth scroll + active section highlighting on scroll
-- Hero section with system statistics
+执行顺序（不可跳过）：
+1. 执行 safety_guardrails 中的输入检查
+2. 识别项目是否涉及支付领域：
+   - 涉及支付/订阅/Ledger/结算：Read domain/payment-states.md
+   - 输入涉及高风险场景：Read domain/security-rules.md
+3. 输出领域识别摘要：
+```
+领域识别：[支付/订阅/Ledger/结算/通用SaaS]
+涉及高风险模块：[支付扣款/账务分录/风控规则/无]
+已加载领域知识：[payment-states.md / 无]
+安全检查：[通过 / 拦截-原因]
+```
 
 ---
 
-## Phase 6: Integration & Packaging
+## Phase 1：需求收集 + Scope 确认
 
-### 6.1 PRD Integration
+<instructions_phase1>
+目标：在生成任何文档前，确保需求完整、范围清晰、双方对齐。
 
-Merge technical diagrams into the PRD main document:
-- Insert each Mermaid diagram at its contextually relevant chapter
-- Add diagram title and brief description above each
-- Update Appendix B with complete companion document index
+必须收集的信息：
+- 产品名称、版本、一句话定位
+- 目标用户与 Persona
+- 功能模块清单（含优先级/版本分期）
+- 核心业务对象及关系
+- 关键业务流程（状态机、审批流等）
+- 与上下游系统的集成点
+- 非功能需求（性能、安全、合规）
 
-### 6.2 Final Packaging
+支付领域必须额外澄清：
+- 是否涉及真实扣款/退款/结算（确认数据安全范围）
+- 计费模式：固定周期 / 按量 / 阶梯 / 混合
+- 多币种支持范围
+- Dunning 策略（重试次数、间隔、降级路径）
+- Ledger/账务记录要求（单式/复式）
 
-Create a ZIP archive containing all deliverables:
+输出 Scope Summary 格式：
+```
+项目：{名称} v{版本}
+定位：{一句话}
+目标用户：{列表}
+MVP 模块（P0）：{列表}
+P1 模块：{列表}
+超出范围：{列表}
+核心业务对象：{列表}
+集成系统：{列表}
+高风险模块：{列表}
+待澄清项：{列表}
+```
+</instructions_phase1>
+
+### HUMAN CHECKPOINT 1
 
 ```
-{Project}_Deliverables_{version}.zip
-├── {Project}_PRD.md
-├── {Project}_ER.mermaid
-├── {Project}_API_Design.md
-├── {Project}_Acceptance_Tests.md
-├── {Project}_DDL.sql
-├── {Project}_Technical_Diagrams.html
-├── {Project}_Business_Guide.html
-└── {Project}_Completeness_Report.md
+✅ Scope Summary 已生成。请确认后继续。
+
+如有修正请直接告知，我将更新 Scope Summary。
+确认无误后回复"确认"，开始文档生成（Phase 2）。
+⚠️ Phase 2 将生成 7 个核心文件，预计内容较长。
 ```
 
-### 6.3 Delivery Checklist
-
-Before delivering, verify:
-- [ ] All files present in archive
-- [ ] Cross-reference report shows 0 Critical / 0 Major issues
-- [ ] PRD Appendix references all companion documents
-- [ ] HTML files render correctly in browser (self-contained, no external deps except CDN)
-- [ ] File naming is consistent across all deliverables
+**收到确认后才能进入 Phase 2。不得自动跳过此检查点。**
 
 ---
 
-## Efficiency Tips
+## Phase 2：核心文档生成（7文件）
 
-1. **Parallelize aggressively** — Use subagents for independent documents (API + Tests can run in parallel)
-2. **DDL as source of truth** — When PRD and DDL conflict on field names/types, DDL usually wins
-3. **Incremental verification** — Don't wait until all files are done; verify each pair as it completes
-4. **Template reuse** — Keep the templates directory as a starting point; customize per project
-5. **Version tracking** — Use semantic versioning in file headers (v1.0 initial, v1.1 after fixes)
+### 并行执行策略
+
+<agentic_execution>
+文件依赖关系，按批次执行：
+
+批次 A（可并行，无依赖）：
+- 2.1 PRD 主文档
+- 2.6 状态机文档
+
+批次 B（依赖批次 A 的 PRD 完成）：
+- 2.2 ER 图（依赖 PRD 数据模型章节）
+- 2.3 API 设计（依赖 PRD 功能模块章节）
+- 2.7 研发任务拆分（依赖 PRD 功能范围）
+
+批次 C（依赖批次 B）：
+- 2.4 验收测试（依赖 API 设计）
+- 2.5 DDL（依赖 ER 图）
+
+每个文件完成后输出状态检查点：
+{"phase": 2, "file": "{filename}", "status": "completed", "stats": {"lines": 0, "pending_items": 0}, "next": "{下一批次}"}
+</agentic_execution>
+
+### 2.1 PRD 主文档
+Read templates/prd-template.md，按以下指令生成：
+
+<prompt_prd>
+<role>支付与 SaaS 系统资深产品经理</role>
+<instructions>
+基于已确认的 Scope Summary 生成工程可执行 PRD。
+- 必须覆盖 prd-template.md 中每一个章节，不确定的用【待确认: 原因】标注
+- 每个功能模块包含：业务规则、字段表（Markdown table 4列）、状态机（Mermaid）、异常处理、验收标准
+- 金额字段必须说明精度（DECIMAL位数）、正负值含义、汇总口径
+- 涉及状态流转时，加载 domain/payment-states.md 中的标准状态，不得自创状态名
+- 不得编造业务规则
+</instructions>
+<output_constraint>章节编号严格按模板；字段表 4 列；长度目标 1500-3000 行</output_constraint>
+</prompt_prd>
+
+### 2.2 ER 图
+Read templates/er-conventions.md，生成 .mermaid 文件。每个实体与 PRD 字段表完全对应；文件头注释包含实体数和关系数；涉及支付实体时参照 domain/payment-states.md 命名规范。
+
+### 2.3 API 设计
+Read templates/api-design-template.md。每个 PRD 功能模块对应一个 API Section；每个端点包含 Method+Path / 描述 / Auth / Request JSON / Response JSON / Error Codes；幂等端点说明幂等键构成；支付端点覆盖成功/失败/超时/重复请求。
+
+### 2.4 验收测试
+Read templates/test-case-template.md。每个功能模块 >= 10 个用例；每个 API 端点 >= 1 正向 + 1 负向；支付场景覆盖成功/失败/超时/重复/取消/退款/拒付；Test ID 连续编号；文件头总用例数与实际一致。
+
+### 2.5 DDL
+Read templates/ddl-conventions.md。表名/字段名与 ER 图完全一致；金额字段 DECIMAL(20,6)，COMMENT 说明精度原因；文件头表数量与实际 CREATE TABLE 数量一致；外键列必须建立索引。
+
+### 2.6 状态机文档
+Read templates/state-machine-template.md。每个有状态对象独立状态机；使用 Mermaid stateDiagram-v2；状态名与 domain/payment-states.md 完全一致；每个转换标注触发方；不可逆转换标记 ⚠️。
+
+### 2.7 研发任务拆分
+Read templates/sprint-tasks-template.md。Epic > Story > Task 三级；每个 Task 包含编号/描述/角色/工时/依赖/验收条件；标注关键路径；高风险 Task 标记 ⚠️。
+
+### HUMAN CHECKPOINT 2
+
+```
+📄 7 个核心文件已生成完毕：
+  ✅ PRD.md / ER.mermaid / API_Design.md
+  ✅ Acceptance_Tests.md / DDL.sql
+  ✅ State_Machine.md / Sprint_Tasks.md
+
+即将进入 Phase 3（交叉校验）。
+是否需要在校验前修改任何文件？
+回复"继续"开始校验，或指出需要修改的内容。
+```
+
+---
+
+## Phase 3：5维交叉校验
+
+Read templates/completeness-checklist.md 执行完整校验。
+
+校验维度：
+1. 实体一致性：PRD ↔ ER ↔ DDL
+2. 字段一致性：字段名/类型/约束跨文件对齐
+3. 关系一致性：ER 关系 ↔ DDL 外键
+4. API 与测试覆盖：每个模块有 API，每个 API 有测试
+5. 状态机覆盖（新增）：每个状态转换在 API 和测试用例中有对应覆盖
+
+完整性报告格式：
+| 维度 | 检查项数 | 通过 | Critical | Major | Minor |
+|------|---------|------|----------|-------|-------|
+
+### HUMAN CHECKPOINT 3
+
+```
+[有 Critical/Major 问题]
+⚠️ Critical: {N} 个，Major: {M} 个。
+建议进入 Phase 4 修复后再交付。回复"修复"或"跳过"。
+
+[无 Critical/Major 问题]
+✅ 校验通过（仅 Minor 问题）。回复"继续"进入 Phase 5。
+```
+
+---
+
+## Phase 4：问题修复
+
+修复顺序：Critical > Major > Minor。
+Source of truth：DDL > ER > PRD（字段/类型以 DDL 为准）。
+修复必须同步到所有受影响文件，不得只改一个。
+修复完成后对变更区域重新运行 Phase 3 校验。
+
+---
+
+## Phase 5：架构图 + 业务指南
+
+生成两个 HTML 文件：
+- Technical_Diagrams.html：系统架构/数据流/时序图/模块依赖/状态流转总览（5种 Mermaid）
+- Business_Guide.html：面向非技术干系人，每模块含业务说明/能力卡片/Demo UI Mockup
+
+---
+
+## Phase 6：质量门禁 + 打包交付
+
+Read eval/quality-rubric.md 执行 LLM 自动评分。
+
+判定：
+- >= 90：APPROVED（可进入正式评审）
+- 80-89：APPROVED WITH NOTES（补充待确认项后评审）
+- 70-79：NEEDS_REVISION（修复后重新评分）
+- < 70：BLOCKED（不得进入评审，必须重做）
+
+Read templates/release-checklist-template.md 生成上线 Checklist。
+
+### HUMAN CHECKPOINT 4
+
+```
+[通过] ✅ Score: {X}/100 — APPROVED。回复"打包"生成 ZIP。
+[未通过] 🚫 Score: {X}/100 — BLOCKED。必须修复后重新评分，不得跳过。
+```
+
+打包内容（12文件）：
+PRD.md / ER.mermaid / API_Design.md / Acceptance_Tests.md / DDL.sql /
+State_Machine.md / Sprint_Tasks.md / Technical_Diagrams.html /
+Business_Guide.html / Completeness_Report.md / Release_Checklist.md / Quality_Report.md
+
+---
+
+## 快速指令映射
+
+| 用户指令 | 跳转 Phase | 加载文件 |
+|----------|-----------|---------|
+| /需求澄清 | Phase 1 | payment-states.md（如涉及支付）|
+| /生成PRD | Phase 2.1 | prd-template.md |
+| /生成ER图 | Phase 2.2 | er-conventions.md |
+| /生成API清单 | Phase 2.3 | api-design-template.md |
+| /生成测试用例 | Phase 2.4 | test-case-template.md |
+| /生成状态机 | Phase 2.6 | state-machine-template.md + payment-states.md |
+| /拆分研发任务 | Phase 2.7 | sprint-tasks-template.md |
+| /检查需求完整性 | Phase 3 | completeness-checklist.md |
+| /生成上线Checklist | Phase 6（仅Checklist）| release-checklist-template.md |
+| /质量评分 | Phase 6（仅评分）| eval/quality-rubric.md |
+
+单指令调用时：Phase 0 安全检查仍然必须执行。Human Checkpoint 简化为确认输出结果。
+
+---
+
+## Skill 生命周期
+
+更新触发条件：
+- 每次项目复盘后：更新 Prompt 中的领域规则
+- 每季度：运行 eval/golden-cases/ 回归，评估输出质量漂移
+- 重大故障后：专项修订对应 Phase 的 Guardrails
+- 模型版本升级时：更新 validated_models，重新运行 eval
+
+暂停使用标准：
+- 连续 3 次输出评分 < 70
+- 输出被发现包含编造的业务规则
+- 被用于处理未脱敏的生产数据
