@@ -1,183 +1,183 @@
-# Full PRD Workflow
+# Payment PRD Workflow Skill v2.0.0
 
-**[English](#english)** | **[中文](#中文)**
-
----
-
-## English
-
-### Overview
-
-Full PRD Workflow is an AI-agent skill that implements a structured, 6-phase methodology for producing professional-grade Product Requirements Document (PRD) deliverable suites. It is designed to be used within [QoderWork](https://qoder.com) or any compatible AI agent environment.
-
-Rather than generating a single monolithic document, this skill orchestrates the creation of a complete deliverable set — PRD document, ER diagram, API design, acceptance tests, database DDL, architecture diagrams, and a business-facing guide — with built-in cross-reference verification to ensure consistency across all artifacts.
-
-### Features
-
-- **End-to-End PRD Delivery** — From requirements scoping to final packaging, the entire workflow is automated across 6 phases.
-- **5 Core Deliverables** — PRD main document, ER diagram (Mermaid), API design document, acceptance test cases, and database DDL.
-- **Cross-Reference Verification** — A multi-dimension consistency check across entities, fields, relationships, and API/test coverage.
-- **Issue Remediation** — Automated fix workflow prioritized by severity (Critical → Major → Minor).
-- **Architecture & Business Outputs** — Interactive technical diagrams (HTML + Mermaid) and a stakeholder-friendly business guide with UI mockups.
-- **Parallel Execution** — Leverages subagents to generate independent documents concurrently for faster delivery.
-
-### Workflow Phases
-
-| Phase | Description |
-|-------|-------------|
-| **1. Requirements Scoping** | Gather product info, define scope boundaries, confirm with stakeholders |
-| **2. Core Document Generation** | Produce 5 deliverable files (PRD, ER, API, Tests, DDL) in parallel |
-| **3. Cross-Reference Verification** | Run 4-dimension consistency checks and generate a completeness report |
-| **4. Issue Remediation** | Fix identified issues by severity, with parallel subagent streams |
-| **5. Architecture & Business Guide** | Create interactive diagrams and a business-facing HTML guide |
-| **6. Integration & Packaging** | Merge diagrams into PRD, package all files into a ZIP archive |
-
-### Project Structure
-
-```
-full-prd-workflow/
-├── SKILL.md                          # Skill definition and workflow instructions
-├── README.md                         # This file
-└── templates/
-    ├── prd-template.md               # PRD main document template
-    ├── api-design-template.md        # API design document template
-    ├── er-conventions.md             # ER diagram naming and syntax conventions
-    ├── test-case-template.md         # Acceptance test case template
-    ├── ddl-conventions.md            # Database DDL naming and structure conventions
-    └── completeness-checklist.md     # Cross-reference verification checklist
-```
-
-### Deliverable Output
-
-A complete delivery package includes:
-
-```
-{Project}_Deliverables_{version}.zip
-├── {Project}_PRD.md                  # Product Requirements Document
-├── {Project}_ER.mermaid              # Entity Relationship Diagram
-├── {Project}_API_Design.md           # API Endpoint Specifications
-├── {Project}_Acceptance_Tests.md     # Test Cases with full coverage
-├── {Project}_DDL.sql                 # Database Schema Definition
-├── {Project}_Technical_Diagrams.html # Interactive Architecture Diagrams
-├── {Project}_Business_Guide.html     # Stakeholder Guide with UI Mockups
-└── {Project}_Completeness_Report.md  # Cross-Reference Verification Report
-```
-
-### Installation
-
-This skill is designed for use with QoderWork. To install:
-
-1. Place the `full-prd-workflow/` folder into your skills directory (`~/.qoderwork/skills/`).
-2. Restart or refresh your QoderWork session.
-3. The skill will be available automatically — invoke it by asking to "write a PRD" or "generate product requirements."
-
-### Usage
-
-Simply describe your product or feature to the AI agent. For example:
-
-> "Write a complete PRD for a subscription billing platform that supports recurring payments, plan management, and invoice generation."
-
-The skill will guide the agent through requirements scoping, document generation, verification, and final packaging.
-
-### Verification Dimensions
-
-The built-in cross-reference check covers four dimensions:
-
-- **Entity Consistency** — PRD entities, ER diagram entities, and DDL tables must align perfectly.
-- **Field Consistency** — Field names, types, and constraints match across PRD, ER, and DDL.
-- **Relationship Consistency** — ER relationships correspond to DDL foreign keys; no orphan entities.
-- **API & Test Coverage** — Every PRD module has API endpoints, and every endpoint has acceptance tests.
-
-### License
-
-MIT License. See [LICENSE](LICENSE) for details.
+面向支付与 SaaS 产研团队的 AI 工程交付 Skill，覆盖从项目立项到上线打包的全生命周期。
 
 ---
 
-## 中文
+## 快速开始
 
-### 概述
+将本 Skill 安装到 Claude Cowork 后，直接输入以下指令触发：
 
-Full PRD Workflow 是一个 AI Agent 技能（Skill），实现了一套结构化的六阶段方法论，用于生成专业级的产品需求文档（PRD）交付物套件。该技能可在 [QoderWork](https://qoder.com) 或任何兼容的 AI Agent 环境中使用。
+```
+/生成PRD          → 生成工程可执行 PRD
+/生成状态机       → 生成业务对象状态机（含 Mermaid 图）
+/拆分研发任务     → 生成 Epic/Story/Task 三级任务清单
+/生成上线Checklist → 生成含 Go/No-Go 判断的上线检查表
+/需求澄清         → 从模糊需求输出结构化 Scope Summary
+/检查需求完整性   → 对已有文档进行 5 维交叉校验
+```
 
-与生成单一的文档不同，该技能协调生成一套完整的交付物——PRD 主文档、ER 图、API 设计、验收测试、数据库 DDL、架构图和面向业务的指南——并内置交叉引用验证，确保所有产出物之间的一致性。
+或者描述项目背景，让 Skill 自动从 Phase 0 开始全流程执行。
 
-### 核心特性
+---
 
-- **端到端 PRD 交付** — 从需求范围确认到最终打包，整个工作流通过 6 个阶段自动完成。
-- **5 大核心交付物** — PRD 主文档、ER 图（Mermaid）、API 设计文档、验收测试用例和数据库 DDL。
-- **交叉引用验证** — 对实体、字段、关系和 API/测试覆盖率进行多维度一致性检查。
-- **问题自动修复** — 按严重程度（Critical → Major → Minor）优先修复已识别的问题。
-- **架构图与业务指南** — 生成交互式技术架构图（HTML + Mermaid）和面向利益相关方的业务指南（含 UI 原型）。
-- **并行执行** — 利用子代理同时生成独立文档，提升交付效率。
+## 适用场景
 
-### 工作流阶段
+- **领域**：订阅计费（Subscription Billing）、账务分录（Ledger）、支付网关、风控、结算
+- **团队角色**：业务负责人、产品经理、架构师、后端/前端研发、QA、DevOps
+- **项目阶段**：立项 → 需求澄清 → PRD → 系统设计 → 开发排期 → 测试 → 上线 → 复盘
 
-| 阶段 | 说明 |
+---
+
+## 工作流
+
+```
+Phase 0  安全检查 + 领域识别      [每次调用，自动执行]
+Phase 1  需求收集 + Scope 确认    [⏸ 等待人工确认]
+Phase 2  7 文件并行/串行生成      [⏸ 等待人工确认]
+Phase 3  5 维交叉校验             [⏸ 等待人工确认]
+Phase 4  问题修复
+Phase 5  架构图 + 业务指南 HTML
+Phase 6  质量门禁评分 + 打包交付  [⏸ 等待人工确认]
+```
+
+**完整交付物（12 文件）：**
+
+| 文件 | 说明 |
 |------|------|
-| **1. 需求范围确认** | 收集产品信息，界定范围边界，与利益相关方确认 |
-| **2. 核心文档生成** | 并行生成 5 个交付文件（PRD、ER、API、测试、DDL） |
-| **3. 交叉引用验证** | 执行 4 个维度的一致性检查，生成完整性报告 |
-| **4. 问题修复** | 按严重程度修复问题，支持子代理并行处理 |
-| **5. 架构图与业务指南** | 创建交互式技术架构图和面向业务的 HTML 指南 |
-| **6. 整合与打包** | 将架构图合并到 PRD 中，将所有文件打包为 ZIP 归档 |
+| `{Project}_PRD.md` | 工程可执行 PRD，含状态机、字段表、验收标准 |
+| `{Project}_ER.mermaid` | 实体关系图 |
+| `{Project}_API_Design.md` | 完整 API 设计，含 Request/Response Schema |
+| `{Project}_Acceptance_Tests.md` | 验收测试用例集 |
+| `{Project}_DDL.sql` | 数据库建表脚本 |
+| `{Project}_State_Machine.md` | 业务对象状态机文档 |
+| `{Project}_Sprint_Tasks.md` | 研发任务拆分（Epic/Story/Task）|
+| `{Project}_Technical_Diagrams.html` | 交互式架构图（5 种 Mermaid）|
+| `{Project}_Business_Guide.html` | 面向非技术干系人的业务指南 |
+| `{Project}_Completeness_Report.md` | 5 维交叉校验报告 |
+| `{Project}_Release_Checklist.md` | 上线 Checklist（含 Go/No-Go）|
+| `{Project}_Quality_Report.md` | LLM 自动评分报告 |
 
-### 项目结构
+---
 
-```
-full-prd-workflow/
-├── SKILL.md                          # 技能定义与工作流指令
-├── README.md                         # 本文件
-└── templates/
-    ├── prd-template.md               # PRD 主文档模板
-    ├── api-design-template.md        # API 设计文档模板
-    ├── er-conventions.md             # ER 图命名与语法规范
-    ├── test-case-template.md         # 验收测试用例模板
-    ├── ddl-conventions.md            # 数据库 DDL 命名与结构规范
-    └── completeness-checklist.md     # 交叉引用验证清单
-```
-
-### 交付产出
-
-一个完整的交付包包含：
+## 文件结构
 
 ```
-{项目名}_Deliverables_{版本号}.zip
-├── {项目名}_PRD.md                   # 产品需求文档
-├── {项目名}_ER.mermaid               # 实体关系图
-├── {项目名}_API_Design.md            # API 接口规范
-├── {项目名}_Acceptance_Tests.md      # 全覆盖测试用例
-├── {项目名}_DDL.sql                  # 数据库表结构定义
-├── {项目名}_Technical_Diagrams.html  # 交互式架构图
-├── {项目名}_Business_Guide.html      # 利益相关方指南（含 UI 原型）
-└── {项目名}_Completeness_Report.md   # 交叉引用验证报告
+payment-prd-skill/
+├── SKILL.md                           ← 核心执行文件（~400行，每次全量加载）
+├── domain/
+│   ├── payment-states.md              ← 支付领域标准状态定义（唯一来源）
+│   └── security-rules.md             ← 数据安全边界规则
+├── templates/
+│   ├── prd-template.md
+│   ├── er-conventions.md
+│   ├── api-design-template.md
+│   ├── test-case-template.md
+│   ├── ddl-conventions.md
+│   ├── state-machine-template.md      ← v2.0 新增
+│   ├── sprint-tasks-template.md       ← v2.0 新增
+│   ├── release-checklist-template.md  ← v2.0 新增
+│   └── completeness-checklist.md
+└── eval/
+    ├── quality-rubric.md              ← LLM 可执行评分 Rubric
+    └── golden-cases/
+        └── README.md                  ← 回归验证框架说明
 ```
 
-### 安装方式
+> **Context 效率设计**：SKILL.md 每次全量加载（~400行），其余文件按 Phase 按需 Read，不预加载。
 
-该技能适用于 QoderWork 平台，安装步骤如下：
+---
 
-1. 将 `full-prd-workflow/` 文件夹放入技能目录（`~/.qoderwork/skills/`）。
-2. 重启或刷新 QoderWork 会话。
-3. 技能将自动可用——通过要求"写一个 PRD"或"生成产品需求文档"即可调用。
+## 核心能力
 
-### 使用方式
+### 安全前置检查
+每次调用前自动扫描输入，命中以下规则时立即拦截：
+- **FORBIDDEN_INPUT**：真实卡号、API Key、生产数据库连接串等敏感数据 → 拒绝处理，要求脱敏
+- **HIGH_RISK_INTERCEPT**：生产数据库变更脚本、真实资金操作方案 → 提示高风险，等待人工确认
 
-只需向 AI Agent 描述你的产品或功能需求，例如：
+### 支付领域知识内置
+`domain/payment-states.md` 定义了 Subscription / Invoice / Payment Attempt / Dunning 的标准状态枚举、合法转换规则和标准 Webhook 事件列表。所有生成文档中的状态名必须与此文件一致，不得自创。
 
-> "为一个支持周期性支付、套餐管理和账单生成的订阅计费平台编写完整的 PRD。"
+### LLM 自动质量评分
+`eval/quality-rubric.md` 提供 5 维可执行评分标准，AI 在 Phase 6 自动打分：
 
-技能将引导 Agent 完成需求确认、文档生成、验证和最终打包的全流程。
+| 维度 | 权重 |
+|------|------|
+| 业务完整性 | 25% |
+| 工程可执行性 | 25% |
+| 系统一致性 | 20% |
+| 风险控制覆盖 | 15% |
+| 文档规范性 | 15% |
 
-### 验证维度
+总分 < 70 → BLOCKED，不得打包；70-79 → 必须修复；≥ 80 → 可交付。
 
-内置的交叉引用检查覆盖四个维度：
+### 5 维交叉校验
+自动检查 PRD / ER / DDL / API / 测试用例之间的一致性（实体/字段/关系/API覆盖/状态机覆盖），生成带严重度分级的 Completeness Report。
 
-- **实体一致性** — PRD 实体、ER 图实体和 DDL 表必须完全对齐。
-- **字段一致性** — 字段名、类型和约束在 PRD、ER 和 DDL 之间保持一致。
-- **关系一致性** — ER 关系对应 DDL 外键，无孤立实体。
-- **API 与测试覆盖率** — 每个 PRD 模块都有 API 端点，每个端点都有验收测试。
+---
 
-### 许可证
+## 数据安全
 
-MIT License. 详见 [LICENSE](LICENSE)。
+**允许输入：** 脱敏后的业务流程、示例数据（标注 example/test）、非生产错误信息
+
+**禁止输入：** 真实卡号/CVV、API Key、Webhook Secret、生产数据库连接串、含PII的生产日志
+
+参见 `domain/security-rules.md` 完整规则。
+
+---
+
+## 质量门禁
+
+AI 输出默认为 **Draft**，进入正式评审前必须满足：
+
+```
+总分 ≥ 80 分
+Completeness Report 无 Critical 问题
+所有 Human Checkpoint 已人工确认
+```
+
+---
+
+## 团队角色与责任
+
+| 角色 | 常用指令 | Review 责任 |
+|------|---------|------------|
+| 产品经理 | `/需求澄清` `/生成PRD` `/检查需求完整性` | 业务规则、状态机、验收标准 |
+| 架构师 | `/生成系统设计` `/生成ER图` `/生成API清单` | 架构、数据模型、幂等、安全 |
+| 后端研发 | `/生成API清单` `/拆分研发任务` | 接口实现、异常处理 |
+| QA | `/生成测试用例` `/检查需求完整性` | 覆盖率、回归范围 |
+| DevOps | `/生成上线Checklist` | 发布步骤、回滚方案、监控 |
+| 风控/财务 | `/需求澄清` `/检查需求完整性` | 资金规则、结算口径 |
+
+---
+
+## Skill 生命周期
+
+**更新触发条件：**
+- 项目复盘后 → 更新领域规则和 Prompt
+- 每季度 → 运行 `eval/golden-cases/` 回归，评估质量漂移
+- 重大故障后 → 专项修订对应 Phase 的 Guardrails
+- 模型版本升级时 → 更新 `validated_models`，重新运行 eval
+
+**暂停使用标准：**
+- 连续 3 次输出评分 < 70
+- 输出被发现包含编造的业务规则
+- 被用于处理未脱敏的生产数据
+
+---
+
+## 版本历史
+
+| 版本 | 日期 | 主要变更 |
+|------|------|---------|
+| v2.0.0 | 2026-06-05 | 整合 Oceanpayment Skill v1.0；新增 Phase 0 安全检查；扩展为 7 文件交付；XML 结构化 Prompt；LLM 质量门禁；Agentic 并行执行；domain/ + eval/ 目录 |
+| v1.0.0 | 2026-06-01 | 初始版本（full-prd-workflow）|
+
+---
+
+## 验证模型
+
+| 模型 | 状态 |
+|------|------|
+| claude-sonnet-4-6 | ✅ 已验证 |
+| claude-opus-4-8 | ✅ 已验证 |
