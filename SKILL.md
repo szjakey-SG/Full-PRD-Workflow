@@ -221,23 +221,45 @@ P1 模块：{列表}
 ### 并行执行策略
 
 <agentic_execution>
-文件依赖关系，按批次执行：
+<!-- P2 调整 A：依赖图从 DOCUMENT_PLAN 动态推导，不硬编码批次 -->
 
-批次 A（可并行，无依赖）：
-- 2.1 PRD 主文档
-- 2.6 状态机文档
+DEPENDENCY_RULES（静态依赖关系，始终成立）：
+  PRD          → 无依赖（第一个生成）
+  State_Machine→ 无依赖（可与 PRD 并行，但须在 PRD 完成后用 PRD 内容校验状态名）
+  ER           → 依赖 PRD（需要 PRD 字段表）
+  API_Design   → 依赖 PRD（需要 PRD 功能模块）
+  Sprint_Tasks → 依赖 PRD（需要 PRD 功能范围）
+  Test_Cases   → 依赖 API_Design（需要端点列表）；如有 State_Machine 则也依赖它
+  DDL          → 依赖 ER（需要实体关系图）
+  Release_Checklist → 依赖 Sprint_Tasks（如已生成）；依赖 State_Machine（如已生成）
 
-批次 B（依赖批次 A 的 PRD 完成）：
-- 2.2 ER 图（依赖 PRD 数据模型章节）
-- 2.3 API 设计（依赖 PRD 功能模块章节）
-- 2.7 研发任务拆分（依赖 PRD 功能范围）
+BATCH_DERIVATION（每次执行前，基于当前 DOCUMENT_PLAN 动态推导批次）：
+  Step 1：从 DOCUMENT_PLAN 取出"必须生成"文档集 D
+  Step 2：按 DEPENDENCY_RULES 对 D 中文档做拓扑排序
+  Step 3：输出动态批次：
+    批次 1 = D 中入度为 0 的文档（无前置依赖）
+    批次 2 = 依赖批次 1 中文档且批次 1 全部完成后解锁的文档
+    批次 N = 以此类推，直到 D 中所有文档排入某批次
 
-批次 C（依赖批次 B）：
-- 2.4 验收测试（依赖 API 设计）
-- 2.5 DDL（依赖 ER 图）
+  示例 A（完整 7 文件）：
+    批次 1：PRD, State_Machine（并行）
+    批次 2：ER, API_Design, Sprint_Tasks（并行，PRD 完成后解锁）
+    批次 3：DDL, Test_Cases（并行，各自前置满足后解锁）
+    批次 4：Release_Checklist（Sprint_Tasks + State_Machine 完成后解锁）
+
+  示例 B（DOCUMENT_PLAN = [PRD, API_Design, Test_Cases]）：
+    批次 1：PRD
+    批次 2：API_Design（PRD 完成后解锁）
+    批次 3：Test_Cases（API_Design 完成后解锁）
+    → 无并行批次，线性执行
+
+  示例 C（DOCUMENT_PLAN = [PRD, API_Design, State_Machine, Test_Cases]）：
+    批次 1：PRD, State_Machine（并行）
+    批次 2：API_Design（PRD 完成）
+    批次 3：Test_Cases（API_Design + State_Machine 均完成后解锁）
 
 每个文件完成后输出状态检查点：
-{"phase": 2, "file": "{filename}", "status": "completed", "stats": {"lines": 0, "pending_items": 0}, "next": "{下一批次}"}
+{"phase": 2, "file": "{filename}", "status": "completed", "stats": {"lines": 0, "pending_items": 0}, "batch_unlocked": ["{下一批次文档列表}"]}
 </agentic_execution>
 
 ### 2.1 PRD 主文档
@@ -391,3 +413,178 @@ Business_Guide.html / Completeness_Report.md / Release_Checklist.md / Quality_Re
 - 连续 3 次输出评分 < 70
 - 输出被发现包含编造的业务规则
 - 被用于处理未脱敏的生产数据
+
+---
+
+## JIT Planning 补丁（v2.1 扩展）
+
+> 以下内容将当前 Phase 结构升级为符合 Just-in-Time Planning 工程属性的运作模式。
+> 与原有 Phase 0-6 并存，通过 JIT_MODE 标记切换。
+
+### JIT 模式触发条件
+
+用户输入包含以下任一关键词时，切换至 JIT 模式：
+- "快速交付" / "MVP 只要核心文档" / "先出 PRD 就行" / "按需生成"
+- "jit" / "just in time" / "增量生成"
+
+标准模式（默认）：全量 7 文件 → Phase 0-6。
+JIT 模式：按需拉取 → 每步结果驱动下步计划。
+
+---
+
+### JIT 运作流程
+
+#### JIT-Phase 1：Scope 评估 + 初步文档意向声明（取代原 Phase 1）
+
+<!-- P1 调整 A：DOCUMENT_PLAN 分两阶段输出，Phase 1 只输出意向，PRD 完成后才最终确认 -->
+<jit_scope_assessment>
+在 Scope 确认后，仅输出初步文档意向（DOCUMENT_INTENT），不提前锁定完整 DOCUMENT_PLAN。
+
+评估逻辑（用于生成意向，非最终计划）：
+```
+IF 模块数 <= 3 AND 无外部系统集成:
+    意向 = [PRD, API_Design, Acceptance_Tests]
+    暂缓判断 = [ER, DDL, State_Machine]（等 PRD 完成后根据实际字段复杂度再决定）
+
+IF 涉及支付/账务/状态机:
+    意向 += [State_Machine]
+
+IF 需要数据库设计评审:
+    意向 += [ER, DDL]
+
+IF 需要 Sprint 排期:
+    意向 += [Sprint_Tasks]
+
+IF 需要上线:
+    意向 += [Release_Checklist]
+```
+
+输出初步 DOCUMENT_INTENT 声明：
+```
+JIT DOCUMENT_INTENT（初步意向，PRD 完成后将重新确认）：
+  预计生成：[列表]
+  待 PRD 后决定：[列表]（原因：需根据实际模块复杂度判断）
+  预计跳过：[列表]（原因：{原因}）
+  预计 token 消耗：{轻量/标准/完整}
+```
+
+收到用户确认意向后，开始生成 PRD（第一个文档）。
+
+PRD 生成完成后，执行 DOCUMENT_PLAN 最终确认：
+```
+PRD_REVIEW（基于 PRD 实际内容修订文档计划）：
+  实际模块数：{N}，实体数：{M}，有状态对象：{列表}
+  
+  DOCUMENT_PLAN（最终版）：
+    必须生成：[列表]（含从意向新增或移除的项，注明原因）
+    按需生成：[列表]（用户确认后才生成）
+    跳过：[列表]（原因：{基于 PRD 实际内容的原因，非预判}）
+    修订说明：与初步意向的差异：{如无差异则"与意向一致"}
+```
+
+<!-- P2 调整 B：自适应检查点——检查点计划随文档集规模动态生成 -->
+```
+CHECKPOINT_PLAN（基于文档数量自动计算，附在 DOCUMENT_PLAN 后）：
+
+CHECKPOINT_RULES：
+  文档总数 <= 3：1 个检查点，位置 = 全部完成后
+  文档总数 4-5：2 个检查点，位置 = 批次 1 完成后 + 全部完成后
+  文档总数 6-7：3 个检查点，位置 = PRD 完成后 + 批次 2 完成后 + 全部完成后
+  文档总数 >= 8：4 个检查点，均匀分布于各批次结束点
+
+本次检查点安排（基于当前 DOCUMENT_PLAN）：
+  检查点 1：{触发条件}→ {提示内容}
+  检查点 2：{触发条件}→ {提示内容}
+  ...（按 CHECKPOINT_RULES 计算）
+```
+
+用户确认 DOCUMENT_PLAN 最终版（含 CHECKPOINT_PLAN）后，才开始生成 PRD 之后的文档。
+</jit_scope_assessment>
+
+#### JIT-Phase 2：单文档拉取循环（取代原 Phase 2 批次执行）
+
+<jit_pull_loop>
+不预先启动所有文档生成。对 DOCUMENT_PLAN 中的每个文档，执行以下循环：
+
+<!-- P0 调整 A：文档→模板映射表（按文档加载，不按阶段预加载） -->
+TEMPLATE_MAP（每个文档生成前才触发对应 Read）：
+  PRD              → Read templates/prd-template.md
+  ER               → Read templates/er-conventions.md
+  API_Design       → Read templates/api-design-template.md
+  Test_Cases       → Read templates/test-case-template.md
+  DDL              → Read templates/ddl-conventions.md
+  State_Machine    → Read templates/state-machine-template.md
+                     + Read domain/payment-states.md
+  Sprint_Tasks     → Read templates/sprint-tasks-template.md
+  Release_Checklist→ Read templates/release-checklist-template.md
+
+规则：DOCUMENT_PLAN 中未列出的文档，其对应 template 不得加载。
+
+<!-- P0 调整 B：每文档的最小上下文包（micro-plan 必须注入的内容） -->
+CONTEXT_PACKAGE（micro-plan 执行时必须从已生成文档中提取以下字段）：
+  PRD：
+    - 无前序文档，从需求澄清记录中提取：核心模块列表、业务规则约束、关键名词定义
+  ER：
+    - 从 PRD 提取：所有字段表（实体名 + 字段名 + 类型）、模块间依赖关系
+  API_Design：
+    - 从 PRD 提取：功能模块接口列表、认证方式、幂等要求
+    - 从 ER 提取（如已生成）：核心实体名称、主键命名规范
+  Test_Cases：
+    - 从 PRD 提取：每个模块的验收条件、异常场景描述
+    - 从 API_Design 提取（如已生成）：所有 endpoint 路径 + 错误码列表
+    - 从 State_Machine 提取（如已生成）：所有状态转换路径
+  DDL：
+    - 从 ER 提取：完整实体列表、关系类型（1:N / M:N）、索引字段
+    - 从 PRD 提取：金额精度要求、软删除/审计字段要求
+  State_Machine：
+    - 从 PRD 提取：有状态对象列表、状态名称（须与 domain/payment-states.md 核对）、触发事件
+    - 从 API_Design 提取（如已生成）：触发状态变更的 endpoint 列表
+  Sprint_Tasks：
+    - 从 PRD 提取：模块列表、优先级、依赖关系
+    - 从 API_Design 提取（如已生成）：接口数量（用于估算后端工时）
+    - 从 DDL 提取（如已生成）：表数量（用于估算 DB 工时）
+  Release_Checklist：
+    - 从 Sprint_Tasks 提取（如已生成）：高风险 Task 列表、关键路径
+    - 从 State_Machine 提取（如已生成）：不可逆转换列表（需发布前验证）
+
+FOR each doc IN DOCUMENT_PLAN:
+  1. MICRO-PLAN（步前微规划）：
+     按 CONTEXT_PACKAGE[doc] 的规定，从已生成文档中提取所需字段，输出：
+     "生成 {doc} 的上下文包：
+      - [从前序文档A提取的具体内容摘要]
+      - [从前序文档B提取的具体内容摘要]
+      约束：[基于上下文包识别出的注意事项]"
+
+  2. READ TEMPLATE_MAP[doc]（仅在此步骤触发，不提前加载）
+
+  3. GENERATE（严格按 micro-plan 的上下文包约束生成）
+
+  4. PER-DOCUMENT QUALITY CHECK：
+     对刚生成的文档执行即时一致性检查：
+     - 与前序文档的字段名是否对齐？
+     - 状态名是否与 domain/payment-states.md 一致？
+     - 是否有【待确认】项需要标注？
+     输出：{doc} ✅ 通过 / ⚠️ {N} 处不一致（立即修复，不等 Phase 3）
+
+  5. CHECKPOINT（每文档完成后）：
+     <!-- P1 调整 B：部分交付机制——每个检查点明确说明可停止边界和已可交付集合 -->
+     输出以下检查点卡片：
+     ```
+     ✅ {doc} 已生成（{lines} 行，{N} 个待确认项）
+
+     ━━ 当前可交付集合 ━━
+     {已完成文档列表}  ← 以上文档已自洽，可独立使用
+
+     ━━ 独立性说明 ━━
+     {根据 PARTIAL_DELIVERY_RULES 判断当前集合的交付状态}
+
+     ━━ 下一步 ━━
+     继续 → 生成 {next_doc}
+     暂停 → 当前集合已可交付，输入停止结束本次生成
+     ```
+
+PARTIAL_DELIVERY_RULES（独立性判断规则，用于生成独立性说明）：
+  仅 PRD               → ✅ 可独立用于：需求评审、立项决策
+  PRD + API_Design     → ✅ 可独立用于：前后端接口对齐、联调启动
+  PRD + State_Machine  → ✅ 可独立用于：业务流程评审、前端状态管理设计
+  PRD + ER + DDL       → ✅ 可独立用于：数据库设计评审、D
